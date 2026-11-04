@@ -4,7 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Pendientes bancarios</title>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏦</text></svg>">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="icon" href="icons/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#0A4286">
+<meta name="robots" content="noindex, nofollow">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@600&display=swap" rel="stylesheet">
@@ -57,7 +62,12 @@ header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background
 .stripe{display:flex;height:5px}
 .stripe span{flex:1}
 .top-in{max-width:1200px;margin:0 auto;padding:12px 20px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
-h1{margin:0;font-family:"IBM Plex Sans Condensed","Arial Narrow",sans-serif;font-weight:600;font-size:22px;letter-spacing:-.01em;flex:1 1 auto;color:var(--accent)}
+h1{margin:0;font-family:"IBM Plex Sans Condensed","Arial Narrow",sans-serif;font-weight:600;font-size:22px;letter-spacing:-.01em;flex:1 1 auto;color:var(--accent);display:flex;align-items:center;gap:10px}
+h1 img{border-radius:8px;flex:none}
+.op{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:14px}
+.op input{border:1px solid var(--line);background:var(--bg);border-radius:999px;padding:7px 14px;width:170px}
+.op input:focus{border-color:var(--p3);background:var(--surface)}
+.op.need input{border-color:var(--warn);background:var(--warn-soft)}
 .who-am-i{color:var(--muted);font-size:14px}
 .btn{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:8px 16px;cursor:pointer;font-weight:500;white-space:nowrap}
 .btn:hover{border-color:var(--p3)}
@@ -72,15 +82,6 @@ main{max-width:1200px;margin:0 auto;padding:18px 20px 60px}
 .status.show{display:block}
 .status.ok{background:var(--accent-soft);color:var(--accent)}
 
-/* login */
-.login{max-width:380px;margin:9vh auto 0;background:var(--surface);border:1px solid var(--line);border-radius:18px;overflow:hidden}
-.login .stripe{height:8px}
-.login form{padding:26px 26px 28px;display:grid;gap:14px}
-.login h2{margin:0;font-family:"IBM Plex Sans Condensed","Arial Narrow",sans-serif;font-size:24px;color:var(--accent)}
-.login p{margin:0;color:var(--muted);font-size:14px}
-.login label{display:grid;gap:5px;font-size:14px;font-weight:500}
-.login input{border:1px solid var(--line);background:var(--bg);border-radius:10px;padding:10px 12px}
-.login .err{color:var(--danger);font-size:14px;min-height:1em}
 
 .panel{background:var(--surface);border:1px solid var(--line);border-left:5px solid var(--p3);border-radius:12px;padding:16px 18px;margin-bottom:18px}
 .panel h2{margin:0 0 8px;font-size:17px;font-weight:600}
@@ -140,7 +141,7 @@ input[type=search]{flex:1 1 200px;min-width:0}
 
 @media (max-width:760px){
   .top-in{padding:10px 14px}
-  .who-am-i{display:none}
+  .op span{display:none}.op input{width:130px}
   main{padding:14px 12px 50px}
   .row{grid-template-columns:38px minmax(0,1fr) auto;grid-template-areas:"chk who amt" ". notes notes";gap:6px 10px;padding:12px 12px 12px 8px}
   .row.head{display:none}
@@ -154,29 +155,16 @@ input[type=search]{flex:1 1 200px;min-width:0}
 <header class="top">
   <div class="stripe" aria-hidden="true"><span style="background:var(--p1)"></span><span style="background:var(--p2)"></span><span style="background:var(--p3)"></span><span style="background:var(--p4)"></span><span style="background:var(--p5)"></span></div>
   <div class="top-in">
-    <h1>Pendientes bancarios</h1>
-    <span class="who-am-i" id="whoami"></span>
-    <button class="btn primary" id="btnUpload" hidden>Subir Excel de Darío</button>
-    <button class="btn" id="btnLogout" hidden>Salir</button>
+    <h1><img src="icons/icon.svg" alt="" width="34" height="34">Pendientes bancarios</h1>
+    <label class="op" id="opBox"><span>Operador</span><input id="opName" type="text" placeholder="Tu nombre" autocomplete="name" maxlength="40"></label>
+    <button class="btn primary" id="btnUpload">Subir Excel de Darío</button>
     <input type="file" id="file" accept=".xlsx,.xls" hidden>
   </div>
 </header>
 <main>
   <p class="status" id="status" role="status"></p>
 
-  <section class="login" id="login" hidden>
-    <div class="stripe" aria-hidden="true"><span style="background:var(--p1)"></span><span style="background:var(--p2)"></span><span style="background:var(--p3)"></span><span style="background:var(--p4)"></span><span style="background:var(--p5)"></span></div>
-    <form id="loginForm">
-      <h2>Ingresar</h2>
-      <p>Usá el email y la contraseña que te dio el administrador.</p>
-      <label>Email<input type="email" id="email" autocomplete="username" required></label>
-      <label>Contraseña<input type="password" id="pass" autocomplete="current-password" required></label>
-      <div class="err" id="loginErr" role="alert"></div>
-      <button class="btn primary" type="submit" id="loginBtn">Ingresar</button>
-    </form>
-  </section>
-
-  <div id="app" hidden>
+  <div id="app">
     <div id="plan"></div>
     <div class="controls">
       <div class="tabs" role="tablist" id="tabs"></div>
@@ -191,7 +179,7 @@ input[type=search]{flex:1 1 200px;min-width:0}
 <script>
 (function(){
 const TABLE="pend_movimientos";
-const S = { rows:new Map(), tab:"pend", mes:"all", q:"", email:null, ops:{}, plan:null, busy:false, pendingRender:false, justSaved:null, channel:null };
+const S = { rows:new Map(), tab:"pend", mes:"all", q:"", name:"", plan:null, busy:false, pendingRender:false, justSaved:null, channel:null };
 const $ = id => document.getElementById(id);
 const MESES=["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
 const money=new Intl.NumberFormat("es-AR",{style:"currency",currency:"ARS",minimumFractionDigits:2});
@@ -279,7 +267,7 @@ function buildPlan(fileRows,archivo,omitidas){
       const ex=S.rows.get(id);
       if(!ex){
         const dudosa=previas>0&&n>previas;
-        inserts.push({...r,id,n,en_lista:true,dudosa,archivo,creado_por:S.email});
+        inserts.push({...r,id,n,en_lista:true,dudosa,archivo,creado_por:S.name||null});
         res.nuevas++; if(dudosa) res.dudosas++;
       } else {
         const patch={};
@@ -343,10 +331,6 @@ async function loadAll(){
   S.rows=new Map(all.map(d=>[d.id,d]));
   scheduleRender();
 }
-async function loadOperadores(){
-  const {data}=await sb.from("pend_operadores").select("email,nombre");
-  S.ops={}; (data||[]).forEach(o=>S.ops[o.email]=o.nombre);
-}
 function subscribe(){
   if(S.channel) return;
   S.channel=sb.channel("pend-mov")
@@ -357,7 +341,8 @@ function subscribe(){
     })
     .subscribe(st=>{ if(st==="SUBSCRIBED"&&S.rows.size) loadAll(); });
 }
-function nombreDe(email){ if(!email) return "alguien"; if(email===S.email) return "vos"; return S.ops[email]||email.split("@")[0]; }
+function nombreDe(n){ if(!n) return "alguien"; if(S.name&&norm(n)===norm(S.name)) return "vos"; return n; }
+function needName(){ if(S.name) return false; $("opBox").classList.add("need"); $("opName").focus(); status("Escribí tu nombre arriba, en Operador, para registrar o comentar."); return true; }
 
 /* ---------- vista ---------- */
 const TABS=[
@@ -416,8 +401,9 @@ async function write(id,patch){
 }
 $("list").addEventListener("change",async e=>{
   const cb=e.target; if(cb.type!=="checkbox") return;
+  if(needName()){ cb.checked=!cb.checked; return; }
   const id=cb.closest(".row").dataset.id;
-  const ok=await write(id,cb.checked?{registrado:true,reg_por:S.email,reg_en:new Date().toISOString()}:{registrado:false,reg_por:null,reg_en:null});
+  const ok=await write(id,cb.checked?{registrado:true,reg_por:S.name,reg_en:new Date().toISOString()}:{registrado:false,reg_por:null,reg_en:null});
   if(ok) scheduleRender(); else cb.checked=!cb.checked;
 });
 $("list").addEventListener("keydown",e=>{
@@ -429,7 +415,8 @@ $("list").addEventListener("focusout",async e=>{
   const inp=e.target; if(!inp.classList||!inp.classList.contains("com")) return;
   const id=inp.closest(".row").dataset.id, d=S.rows.get(id), v=inp.value.trim();
   if(d&&v!==(d.comentario||"")){
-    const ok=await write(id,{comentario:v,com_por:v?S.email:null,com_en:v?new Date().toISOString():null});
+    if(needName()){ inp.value=d.comentario||""; return; }
+    const ok=await write(id,{comentario:v,com_por:v?S.name:null,com_en:v?new Date().toISOString():null});
     if(ok){S.justSaved=id;setTimeout(()=>{if(S.justSaved===id){S.justSaved=null;scheduleRender();}},2500);}
   }
   setTimeout(()=>{ if(S.pendingRender||S.justSaved===id) scheduleRender(); },0);
@@ -459,37 +446,17 @@ $("file").addEventListener("change",async e=>{
 });
 $("plan").addEventListener("click",e=>{const b=e.target.closest("[data-plan]");if(!b)return;if(b.dataset.plan==="ok")applyPlan();else{S.plan=null;renderPlan();}});
 
-/* ---------- sesión ---------- */
-$("loginForm").addEventListener("submit",async e=>{
-  e.preventDefault(); $("loginErr").textContent=""; $("loginBtn").disabled=true;
-  const {error}=await sb.auth.signInWithPassword({email:$("email").value.trim(),password:$("pass").value});
-  $("loginBtn").disabled=false;
-  if(error) $("loginErr").textContent="Email o contraseña incorrectos.";
+/* ---------- inicio ---------- */
+try{ S.name=localStorage.getItem("pend_operador")||""; }catch(e){}
+$("opName").value=S.name;
+$("opName").addEventListener("change",e=>{
+  S.name=e.target.value.trim(); e.target.value=S.name;
+  try{ localStorage.setItem("pend_operador",S.name); }catch(err){}
+  if(S.name){ $("opBox").classList.remove("need"); status(""); }
+  render();
 });
-$("btnLogout").addEventListener("click",async()=>{ await sb.auth.signOut(); });
-
-let started=false;
-async function onSession(session){
-  if(!session){
-    started=false; S.rows=new Map(); if(S.channel){sb.removeChannel(S.channel);S.channel=null;}
-    $("login").hidden=false; $("app").hidden=true; $("btnUpload").hidden=true; $("btnLogout").hidden=true; $("whoami").textContent=""; status("");
-    return;
-  }
-  if(started) return; started=true;
-  S.email=(session.user.email||"").toLowerCase();
-  $("login").hidden=true; $("btnLogout").hidden=false;
-  const {data:ok,error}=await sb.rpc("pend_es_operador");
-  if(error||!ok){
-    status(`El usuario ${S.email} no está autorizado para ver los movimientos. Pedile al administrador que lo agregue a la lista de operadores.`);
-    return;
-  }
-  await loadOperadores();
-  $("whoami").textContent=S.ops[S.email]||S.email;
-  $("app").hidden=false; $("btnUpload").hidden=false;
-  await loadAll(); subscribe();
-}
-sb.auth.onAuthStateChange((_ev,session)=>{ setTimeout(()=>onSession(session),0); });
-sb.auth.getSession().then(({data})=>onSession(data.session));
+$("opName").addEventListener("keydown",e=>{ if(e.key==="Enter") e.target.blur(); });
+loadAll().then(subscribe);
 })();
 </script>
 </body>

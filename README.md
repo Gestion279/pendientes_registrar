@@ -10,23 +10,9 @@ Es un sitio estático (HTML + JavaScript), sin paso de compilación. Los datos s
 2. En Vercel: **Add New → Project**, importar el repositorio. Framework Preset: **Other**. No hace falta configurar build ni variables de entorno. **Deploy**.
 3. Cada `git push` a la rama principal vuelve a publicar automáticamente.
 
-## Dar acceso a un operador
+## Acceso
 
-Hacen falta dos pasos en el panel de Supabase:
-
-1. **Authentication → Users → Add user → Create new user**: email y contraseña, con *Auto Confirm User* marcado.
-2. **SQL Editor**, ejecutar:
-
-```sql
-insert into public.pend_operadores (email, nombre)
-values ('operador@empresa.com', 'Nombre que se muestra');
-```
-
-Para quitar el acceso: `delete from public.pend_operadores where email = 'operador@empresa.com';`
-
-Solo los emails de esa lista pueden ver o modificar movimientos, aunque alguien cree una cuenta por su cuenta.
-
-Para cambiar una contraseña: **Authentication → Users**, menú de la fila → *Reset password* o editar el usuario.
+La app es de libre acceso: cualquiera con el enlace puede verla y usarla. Cada operador escribe su nombre arriba, en “Operador”; el navegador lo recuerda y se usa para mostrar quién registró o comentó cada movimiento. La página está marcada para que los buscadores no la indexen.
 
 ## Cómo identifica duplicados
 
