@@ -6,8 +6,8 @@
 <title>Pendientes bancarios</title>
 <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
 <link rel="icon" href="icons/favicon-32.png" sizes="32x32" type="image/png">
-<link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=2">
-<link rel="manifest" href="manifest.webmanifest?v=2">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=3">
+<link rel="manifest" href="manifest.webmanifest?v=3">
 <meta name="theme-color" content="#0A4286">
 <meta name="robots" content="noindex, nofollow">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -457,6 +457,7 @@ $("opName").addEventListener("change",e=>{
 });
 $("opName").addEventListener("keydown",e=>{ if(e.key==="Enter") e.target.blur(); });
 loadAll().then(subscribe);
+if("serviceWorker" in navigator){ navigator.serviceWorker.register("/sw.js").catch(()=>{}); }
 })();
 </script>
 </body>
