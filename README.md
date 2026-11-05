@@ -12,7 +12,9 @@ Es un sitio estático (HTML + JavaScript), sin paso de compilación. Los datos s
 
 ## Acceso
 
-La app es de libre acceso: cualquiera con el enlace puede verla y usarla. Cada operador escribe su nombre arriba, en “Operador”; el navegador lo recuerda y se usa para mostrar quién registró o comentó cada movimiento. La página está marcada para que los buscadores no la indexen.
+La app es de libre acceso: cualquiera con el enlace puede verla y usarla. Cada operador escribe su nombre arriba, en “Operador”; el navegador lo recuerda y se usa para mostrar quién registró o comentó cada movimiento. Sin nombre no se puede tildar ni comentar.
+
+Cada movimiento tiene un historial de comentarios (autor, fecha y hora), guardado en la tabla `pend_comentarios`. La pestaña “Pendientes con comentarios” muestra los pendientes que tienen al menos un comentario. La página está marcada para que los buscadores no la indexen.
 
 ## Cómo identifica duplicados
 

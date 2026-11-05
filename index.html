@@ -133,8 +133,16 @@ input[type=search]{flex:1 1 200px;min-width:0}
 
 .com{width:100%;border:1px solid var(--line);background:var(--bg);border-radius:10px;padding:6px 10px;font-size:14px}
 .com:focus{background:var(--surface);border-color:var(--p3)}
-.meta{font-size:12.5px;color:var(--muted);margin-top:4px}
-.saved{color:var(--accent)}
+.cm{padding:5px 0 6px;border-bottom:1px dashed var(--line)}
+.cm:first-child{padding-top:0}
+.cm-h{font-size:12.5px;color:var(--muted);display:flex;gap:8px;flex-wrap:wrap;align-items:baseline}
+.cm-h b{color:var(--ink);font-weight:600}
+.cm-t{font-size:14px;overflow-wrap:anywhere;white-space:pre-wrap}
+.cm-new{display:flex;gap:6px;margin-top:6px}
+.cm-new .com{flex:1;min-width:0}
+.link{border:0;background:none;color:var(--accent);padding:0;cursor:pointer;font-size:12.5px;text-decoration:underline;text-underline-offset:2px}
+.link.del{color:var(--muted)}
+.more{margin-top:4px}
 
 .empty{padding:40px 20px;text-align:center;color:var(--muted)}
 .empty p{margin:6px auto;max-width:52ch}
@@ -147,6 +155,9 @@ input[type=search]{flex:1 1 200px;min-width:0}
   .row.head{display:none}
   .c-when{display:none}
   .sub .when-m{display:inline}
+  .tabs{background:none;border:0;padding:0;gap:6px}
+  .tab{background:var(--surface);border:1px solid var(--line);padding:6px 12px}
+  #mes{flex:1 1 100%}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
@@ -178,8 +189,8 @@ input[type=search]{flex:1 1 200px;min-width:0}
 
 <script>
 (function(){
-const TABLE="pend_movimientos";
-const S = { rows:new Map(), tab:"pend", mes:"all", q:"", name:"", plan:null, busy:false, pendingRender:false, justSaved:null, channel:null };
+const TABLE="pend_movimientos", CTABLE="pend_comentarios";
+const S = { rows:new Map(), tab:"pend", mes:"all", q:"", name:"", coms:new Map(), open:new Set(), drafts:{}, sending:new Set(), plan:null, busy:false, pendingRender:false, justSaved:null, channel:null };
 const $ = id => document.getElementById(id);
 const MESES=["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
 const money=new Intl.NumberFormat("es-AR",{style:"currency",currency:"ARS",minimumFractionDigits:2});
@@ -321,32 +332,51 @@ async function applyPlan(){
 }
 
 /* ---------- datos ---------- */
-async function loadAll(){
-  const all=[]; const page=1000;
+async function fetchAll(table,order){
+  const all=[], page=1000;
   for(let from=0;;from+=page){
-    const {data,error}=await sb.from(TABLE).select("*").order("id").range(from,from+page-1);
-    if(error){ status("No se pudieron leer los movimientos. Recargá la página."); console.error(error); return; }
+    const {data,error}=await sb.from(table).select("*").order(order).range(from,from+page-1);
+    if(error){ console.error(error); return null; }
     all.push(...data); if(data.length<page) break;
   }
-  S.rows=new Map(all.map(d=>[d.id,d]));
+  return all;
+}
+async function loadAll(){
+  const [movs,coms]=await Promise.all([fetchAll(TABLE,"id"),fetchAll(CTABLE,"creado_en")]);
+  if(!movs||!coms){ status("No se pudieron leer los movimientos. Recargá la página."); return; }
+  S.rows=new Map(movs.map(d=>[d.id,d]));
+  S.coms=new Map(); coms.forEach(addCom);
   scheduleRender();
 }
+function addCom(c){
+  const l=S.coms.get(c.mov_id)||[];
+  if(!l.some(x=>x.id===c.id)){ l.push(c); l.sort((a,b)=>a.creado_en<b.creado_en?-1:1); }
+  S.coms.set(c.mov_id,l);
+}
+function removeCom(id){ for(const [k,l] of S.coms){ const f=l.filter(c=>c.id!==id); if(f.length!==l.length){ f.length?S.coms.set(k,f):S.coms.delete(k); } } }
 function subscribe(){
   if(S.channel) return;
   S.channel=sb.channel("pend-mov")
     .on("postgres_changes",{event:"*",schema:"public",table:TABLE},payload=>{
-      if(payload.eventType==="DELETE"){ S.rows.delete(payload.old.id); }
+      if(payload.eventType==="DELETE"){ S.rows.delete(payload.old.id); S.coms.delete(payload.old.id); }
       else { S.rows.set(payload.new.id,payload.new); }
       if(!S.busy) scheduleRender();
     })
+    .on("postgres_changes",{event:"*",schema:"public",table:CTABLE},payload=>{
+      if(payload.eventType==="DELETE") removeCom(payload.old.id);
+      else if(payload.eventType==="INSERT") addCom(payload.new);
+      scheduleRender();
+    })
     .subscribe(st=>{ if(st==="SUBSCRIBED"&&S.rows.size) loadAll(); });
 }
+const fmtFechaHora=v=>{ const d=new Date(v); return pad(d.getDate())+"/"+pad(d.getMonth()+1)+" "+pad(d.getHours())+":"+pad(d.getMinutes()); };
 function nombreDe(n){ if(!n) return "alguien"; if(S.name&&norm(n)===norm(S.name)) return "vos"; return n; }
-function needName(){ if(S.name) return false; $("opBox").classList.add("need"); $("opName").focus(); status("Escribí tu nombre arriba, en Operador, para registrar o comentar."); return true; }
+function needName(){ if(S.name) return false; $("opBox").classList.add("need"); $("opName").focus(); status("Escribí tu nombre arriba, en Operador, para registrar o comentar. Queda guardado en este dispositivo."); return true; }
 
 /* ---------- vista ---------- */
 const TABS=[
   {id:"pend",label:"Pendientes",test:d=>d.en_lista!==false&&!d.registrado},
+  {id:"pcom",label:"Pendientes con comentarios",test:d=>d.en_lista!==false&&!d.registrado&&(S.coms.get(d.id)||[]).length>0},
   {id:"reg",label:"Registradas",test:d=>!!d.registrado},
   {id:"gone",label:"Darío ya no las tiene pendientes",test:d=>d.en_lista===false},
   {id:"all",label:"Todas",test:()=>true}
@@ -362,24 +392,29 @@ function render(){
   $("tabs").innerHTML=TABS.map(t=>`<button class="tab ${t.id==="gone"?"gone":""}" role="tab" data-tab="${t.id}" aria-selected="${S.tab===t.id}">${t.label}<span class="n">${enMes.filter(t.test).length}</span></button>`).join("");
   const tab=TABS.find(t=>t.id===S.tab), q=norm(S.q);
   let vis=enMes.filter(tab.test);
-  if(q) vis=vis.filter(d=>norm([d.nombre,d.concepto,d.detalle,d.nota_dario,d.comentario,fmtMoney(d.monto),d.monto].join(" ")).includes(q));
+  if(q) vis=vis.filter(d=>norm([d.nombre,d.concepto,d.detalle,d.nota_dario,fmtMoney(d.monto),d.monto,...(S.coms.get(d.id)||[]).map(c=>c.autor+" "+c.texto)].join(" ")).includes(q));
   vis.sort((a,b)=>a.fecha<b.fecha?-1:a.fecha>b.fecha?1:(a.nombre||"").localeCompare(b.nombre||"","es")||a.n-b.n);
   const total=vis.reduce((s,d)=>s+(Number(d.monto)||0),0);
   $("sum").innerHTML=vis.length?`<span>${vis.length} ${vis.length===1?"movimiento":"movimientos"}</span><span>Total <b>${fmtMoney(total)}</b></span>`:"";
   const list=$("list");
   if(!all.length){ list.innerHTML=`<div class="empty"><p>Todavía no hay movimientos cargados.</p><p>Subí el Excel de pendientes de Darío para empezar. Podés subir varios meses, de a uno.</p></div>`; return; }
   if(!vis.length){
-    const msg={pend:"No quedan pendientes en esta selección.",reg:"Todavía no hay movimientos registrados en esta selección.",gone:"Darío no quitó ningún movimiento de su lista en esta selección.",all:"No hay movimientos en esta selección."}[S.tab];
+    const msg={pend:"No quedan pendientes en esta selección.",pcom:"Ningún pendiente tiene comentarios en esta selección.",reg:"Todavía no hay movimientos registrados en esta selección.",gone:"Darío no quitó ningún movimiento de su lista en esta selección.",all:"No hay movimientos en esta selección."}[S.tab];
     list.innerHTML=`<div class="empty"><p>${q?"Ningún movimiento coincide con la búsqueda.":msg}</p></div>`; return;
   }
-  list.innerHTML=`<div class="row head"><span></span><span>Fecha</span><span>Razón social y detalle</span><span style="text-align:right">Monto</span><span>Comentario</span></div>`+vis.map(d=>{
+  list.innerHTML=`<div class="row head"><span></span><span>Fecha</span><span>Razón social y detalle</span><span style="text-align:right">Monto</span><span>Comentarios</span></div>`+vis.map(d=>{
     const cls=["row"]; if(d.registrado) cls.push("reg"); else if(d.dudosa) cls.push("dup"); else if(d.en_lista===false) cls.push("gone");
     const chips=[];
     if(d.nota_dario&&norm(d.nota_dario)!=="dario") chips.push(`<span class="chip nota" title="Nota en la planilla de Darío">${esc(d.nota_dario)}</span>`);
     if(d.en_lista===false) chips.push(`<span class="chip gone">Darío la quitó de pendientes${d.quitado_en?" el "+fmtCorta(d.quitado_en):""}</span>`);
     if(d.registrado) chips.push(`<span class="chip reg">Registrada por ${esc(nombreDe(d.reg_por))}${d.reg_en?" el "+fmtCorta(isoOf(d.reg_en)):""}</span>`);
     const dup=d.dudosa?`<div class="dupbox">Ya había otro movimiento con la misma fecha, proveedor y monto. <button class="btn small" data-act="okdup">Es un pago aparte</button><button class="btn small danger" data-act="deldup">Es repetido, quitar</button></div>`:"";
-    const meta=d.comentario&&d.com_por?`<div class="meta ${S.justSaved===d.id?"saved":""}">${S.justSaved===d.id?"Guardado. ":""}${esc(nombreDe(d.com_por))}${d.com_en?", "+fmtCorta(isoOf(d.com_en)):""}</div>`:"";
+    const cs=S.coms.get(d.id)||[], abierto=S.open.has(d.id), vistos=abierto?cs:cs.slice(-1);
+    const hist=vistos.map(c=>`<div class="cm"><div class="cm-h"><b>${esc(nombreDe(c.autor))}</b><span>${fmtFechaHora(c.creado_en)}</span>${S.name&&norm(c.autor)===norm(S.name)?`<button class="link del" data-act="delcom" data-cid="${esc(c.id)}">borrar</button>`:""}</div><div class="cm-t">${esc(c.texto)}</div></div>`).join("");
+    const more=cs.length>1?`<div class="more"><button class="link" data-act="hist">${abierto?"Ocultar historial":`Ver historial (${cs.length} comentarios)`}</button></div>`:"";
+    const form=S.name
+      ?`<div class="cm-new"><input class="com" type="text" maxlength="500" value="${esc(S.drafts[d.id]||"")}" placeholder="Agregar comentario" aria-label="Agregar comentario"><button class="btn small" data-act="addcom" ${S.sending.has(d.id)?"disabled":""}>Comentar</button></div>`
+      :`<div class="cm-new"><input class="com" type="text" disabled placeholder="Escribí tu nombre arriba para comentar" aria-label="Comentario deshabilitado"></div>`;
     return `<div class="${cls.join(" ")}" data-id="${esc(d.id)}">
       <div class="c-chk"><label class="chk" title="${d.registrado?"Quitar registración":"Marcar como registrada"}"><input type="checkbox" ${d.registrado?"checked":""} aria-label="Registrada: ${esc(d.nombre||"Sin nombre")} ${esc(fmtMoney(d.monto))}"><span class="box"></span></label></div>
       <div class="c-when">${fmtFecha(d.fecha)}</div>
@@ -387,7 +422,7 @@ function render(){
         <div class="sub"><span class="when-m">${fmtCorta(d.fecha)}. </span>${esc(d.concepto)}${d.detalle?". "+esc(d.detalle):""}</div>
         ${chips.length?`<div class="chips">${chips.join("")}</div>`:""}${dup}</div>
       <div class="c-amt amt">${fmtMoney(d.monto)}</div>
-      <div class="c-notes"><input class="com" type="text" value="${esc(d.comentario||"")}" placeholder="Agregar comentario" aria-label="Comentario">${meta}</div>
+      <div class="c-notes">${hist}${more}${form}</div>
     </div>`;
   }).join("");
 }
@@ -406,24 +441,40 @@ $("list").addEventListener("change",async e=>{
   const ok=await write(id,cb.checked?{registrado:true,reg_por:S.name,reg_en:new Date().toISOString()}:{registrado:false,reg_por:null,reg_en:null});
   if(ok) scheduleRender(); else cb.checked=!cb.checked;
 });
+async function addComment(id){
+  const texto=(S.drafts[id]||"").trim();
+  if(!texto||S.sending.has(id)) return;
+  if(needName()) return;
+  S.sending.add(id);
+  const {data,error}=await sb.from(CTABLE).insert({mov_id:id,autor:S.name,texto}).select().single();
+  S.sending.delete(id);
+  if(error){ status("No se pudo guardar el comentario. Revisá la conexión y probá de nuevo."); console.error(error); scheduleRender(); return; }
+  addCom(data); delete S.drafts[id];
+  const a=document.activeElement; if(a&&a.classList.contains("com")) a.blur();
+  render();
+}
+$("list").addEventListener("input",e=>{ if(e.target.classList.contains("com")) S.drafts[e.target.closest(".row").dataset.id]=e.target.value; });
 $("list").addEventListener("keydown",e=>{
   if(!e.target.classList.contains("com")) return;
-  if(e.key==="Enter"){e.preventDefault();e.target.blur();}
-  if(e.key==="Escape"){const d=S.rows.get(e.target.closest(".row").dataset.id);e.target.value=(d&&d.comentario)||"";e.target.blur();}
+  const id=e.target.closest(".row").dataset.id;
+  if(e.key==="Enter"){ e.preventDefault(); addComment(id); }
+  if(e.key==="Escape"){ delete S.drafts[id]; e.target.value=""; e.target.blur(); }
 });
-$("list").addEventListener("focusout",async e=>{
-  const inp=e.target; if(!inp.classList||!inp.classList.contains("com")) return;
-  const id=inp.closest(".row").dataset.id, d=S.rows.get(id), v=inp.value.trim();
-  if(d&&v!==(d.comentario||"")){
-    if(needName()){ inp.value=d.comentario||""; return; }
-    const ok=await write(id,{comentario:v,com_por:v?S.name:null,com_en:v?new Date().toISOString():null});
-    if(ok){S.justSaved=id;setTimeout(()=>{if(S.justSaved===id){S.justSaved=null;scheduleRender();}},2500);}
-  }
-  setTimeout(()=>{ if(S.pendingRender||S.justSaved===id) scheduleRender(); },0);
+$("list").addEventListener("focusout",e=>{
+  if(!e.target.classList||!e.target.classList.contains("com")) return;
+  setTimeout(()=>{ if(S.pendingRender) scheduleRender(); },250);
 });
 $("list").addEventListener("click",async e=>{
   const b=e.target.closest("[data-act]"); if(!b) return;
   const id=b.closest(".row").dataset.id;
+  if(b.dataset.act==="addcom"){ addComment(id); return; }
+  if(b.dataset.act==="hist"){ S.open.has(id)?S.open.delete(id):S.open.add(id); render(); return; }
+  if(b.dataset.act==="delcom"){
+    if(!confirm("¿Borrar tu comentario?")) return;
+    const cid=b.dataset.cid; const {error}=await sb.from(CTABLE).delete().eq("id",cid);
+    if(error) status("No se pudo borrar el comentario."); else { removeCom(cid); render(); }
+    return;
+  }
   if(b.dataset.act==="okdup"){ if(await write(id,{dudosa:false})) scheduleRender(); }
   if(b.dataset.act==="deldup"){
     if(!confirm("¿Quitar este movimiento repetido? Se borra de la lista.")) return;
