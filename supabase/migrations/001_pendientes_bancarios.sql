@@ -48,3 +48,22 @@ create policy "pend_mov_libre_insert" on public.pend_movimientos for insert to a
 create policy "pend_mov_libre_update" on public.pend_movimientos for update to anon, authenticated using (true) with check (true);
 create policy "pend_mov_libre_delete" on public.pend_movimientos for delete to anon, authenticated using (true);
 grant select, insert, update, delete on public.pend_movimientos to anon;
+
+-- 003: historial de comentarios
+create table public.pend_comentarios (
+  id uuid primary key default gen_random_uuid(),
+  mov_id text not null references public.pend_movimientos(id) on delete cascade,
+  autor text not null check (length(btrim(autor)) > 0),
+  texto text not null check (length(btrim(texto)) > 0),
+  creado_en timestamptz not null default now()
+);
+create index pend_comentarios_mov_idx on public.pend_comentarios (mov_id, creado_en);
+alter table public.pend_comentarios enable row level security;
+create policy "pend_com_libre_select" on public.pend_comentarios for select to anon, authenticated using (true);
+create policy "pend_com_libre_insert" on public.pend_comentarios for insert to anon, authenticated with check (true);
+create policy "pend_com_libre_delete" on public.pend_comentarios for delete to anon, authenticated using (true);
+grant select, insert, delete on public.pend_comentarios to anon;
+insert into public.pend_comentarios (mov_id, autor, texto, creado_en)
+select id, coalesce(nullif(btrim(com_por), ''), 'Sin nombre'), comentario, coalesce(com_en, now())
+from public.pend_movimientos where btrim(comentario) <> '';
+alter publication supabase_realtime add table public.pend_comentarios;
