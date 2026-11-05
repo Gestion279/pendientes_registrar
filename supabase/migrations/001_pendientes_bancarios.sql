@@ -67,3 +67,10 @@ insert into public.pend_comentarios (mov_id, autor, texto, creado_en)
 select id, coalesce(nullif(btrim(com_por), ''), 'Sin nombre'), comentario, coalesce(com_en, now())
 from public.pend_movimientos where btrim(comentario) <> '';
 alter publication supabase_realtime add table public.pend_comentarios;
+
+-- 004: auditoría 05/11/2026 — permisos mínimos y limpieza
+revoke truncate, references, trigger, update on public.pend_comentarios from anon;
+revoke truncate, references, trigger on public.pend_movimientos from anon;
+drop policy if exists "pend_operadores_select" on public.pend_operadores;
+drop function if exists public.pend_es_operador();
+drop table if exists public.pend_operadores;
