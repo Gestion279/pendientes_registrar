@@ -10,6 +10,10 @@ Es un sitio estático (HTML + JavaScript), sin paso de compilación. Los datos s
 2. En Vercel: **Add New → Project**, importar el repositorio. Framework Preset: **Other**. No hace falta configurar build ni variables de entorno. **Deploy**.
 3. Cada `git push` a la rama principal vuelve a publicar automáticamente.
 
+## Verificar la versión publicada
+
+Al pie de la página figura la versión (por ejemplo, “Versión 2026-11-05.2”). Si después de subir cambios a GitHub sigue mostrando la anterior, revisar en Vercel → Deployments que el último despliegue esté en estado Ready, y en Settings → Git que el repositorio conectado sea este.
+
 ## Acceso
 
 La app es de libre acceso: cualquiera con el enlace puede verla y usarla. Cada operador escribe su nombre arriba, en “Operador”; el navegador lo recuerda y se usa para mostrar quién registró o comentó cada movimiento. Sin nombre no se puede tildar ni comentar.
